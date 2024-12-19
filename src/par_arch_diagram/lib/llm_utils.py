@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import os
 
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import HumanMessage, SystemMessage
+
 from .llm_config import LlmConfig
 from .llm_providers import LlmProvider, provider_base_urls, provider_default_models, provider_env_key_names
 
@@ -49,6 +52,9 @@ def llm_config_from_env(prefix: str = "PARAI") -> LlmConfig:
     num_ctx = os.environ.get(f"{prefix}_NUM_CTX")
     if num_ctx is not None:
         num_ctx = int(num_ctx)
+        if num_ctx < 0:
+            num_ctx = 0
+
     timeout = os.environ.get(f"{prefix}_TIMEOUT")
     if timeout is not None:
         timeout = int(timeout)
@@ -83,9 +89,6 @@ def llm_config_from_env(prefix: str = "PARAI") -> LlmConfig:
     if seed is not None:
         seed = int(seed)
 
-    if num_ctx < 0:
-        num_ctx = 0
-
     return LlmConfig(
         provider=ai_provider,
         model_name=model_name,
@@ -106,4 +109,35 @@ def llm_config_from_env(prefix: str = "PARAI") -> LlmConfig:
         top_k=top_k,
         top_p=top_p,
         seed=seed,
+    )
+
+
+def summarize_content(content: str, llm: BaseChatModel) -> str:
+    """
+    Summarize the content
+
+    Args:
+        content (str): Content to summarize
+        llm (BaseChatModel): LLM
+
+    Returns:
+        str: Summary
+    """
+    summarize_content_instructions = """Your goal is to generate a summary of the content.
+
+    Your response should include the following:
+    - Title
+    - List of key points
+    - Summary
+
+    Do not include the content itself.
+    Do not include a preamble such as "Summary of the content:"
+    """
+    return str(
+        llm.invoke(
+            [
+                SystemMessage(content=summarize_content_instructions),
+                HumanMessage(content=content),
+            ]
+        ).content
     )

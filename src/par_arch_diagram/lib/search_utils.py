@@ -17,10 +17,12 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from langchain_community.utilities import GoogleSerperAPIWrapper
 from langchain_community.utilities.brave_search import BraveSearchWrapper
+from langchain_core.language_models import BaseChatModel
 from rich.console import Console
 from tavily import TavilyClient
 from youtube_transcript_api import YouTubeTranscriptApi
 
+from .llm_utils import summarize_content
 from .web_tools import fetch_url_and_convert_to_markdown
 
 console = Console(stderr=True)
@@ -168,7 +170,9 @@ def serper_search(query: str, *, days: int = 0, max_results: int = 3, scrape: bo
     ]
 
 
-def reddit_search(query: str, subreddit: str = "all", max_comments: int = 0, max_results: int = 3) -> dict[str, Any]:
+def reddit_search(
+    query: str, subreddit: str = "all", max_comments: int = 0, max_results: int = 3
+) -> list[dict[str, Any]]:
     """Search Reddit.
 
     Args:
@@ -192,7 +196,12 @@ def reddit_search(query: str, subreddit: str = "all", max_comments: int = 0, max
         password=os.environ.get("REDDIT_PASSWORD"),
         user_agent="parai",
     )
-    sub_reddit = reddit.subreddit(subreddit)
+    try:
+        sub_reddit = reddit.subreddit(subreddit)
+    except Exception as _:
+        console.log("[red]Subreddit not found, falling back to all")
+        subreddit = "all"
+        sub_reddit = reddit.subreddit(subreddit)
     if query == "hot":
         sub_reddit = sub_reddit.hot(limit=max_results)
     elif query == "new":
@@ -230,7 +239,7 @@ def reddit_search(query: str, subreddit: str = "all", max_comments: int = 0, max
         ]
         rec = {"title": sub.title, "url": sub.url, "content": sub.selftext, "raw_content": "\n".join(raw_content)}
         results.append(rec)
-    return {"results": results}
+    return results
 
 
 def youtube_get_video_id(url: str) -> str | None:
@@ -287,7 +296,13 @@ def youtube_get_transcript(video_id: str, languages: list[str] | None = None) ->
 
 
 def youtube_search(
-    query: str, *, days: int = 0, max_comments: int = 0, max_results: int = 3, fetch_transcript: bool = False
+    query: str,
+    *,
+    days: int = 0,
+    max_comments: int = 0,
+    max_results: int = 3,
+    fetch_transcript: bool = False,
+    summarize_llm: BaseChatModel | None = None,
 ) -> list[dict[str, Any]]:
     """
     Search YouTube for videos.
@@ -298,6 +313,7 @@ def youtube_search(
         max_comments (int, optional): The maximum number of comments to fetch for each video. Defaults to 0 meaning no comments.
         max_results (int, optional): The maximum number of results to return. Defaults to 3.
         fetch_transcript (bool, optional): Whether to fetch the transcript for each video. Defaults to False.
+        summarize_llm (BaseChatModel, optional): The LLM to use for summarizing the transcript. Defaults to None meaning no summarization.
 
     Returns:
         - results (list): List of search result dictionaries, each containing:
@@ -354,11 +370,15 @@ def youtube_search(
 
         if fetch_transcript:
             transcript_text = youtube_get_transcript(video_id, languages=["en"])
-            content += "\n\nTranscript:\n" + transcript_text
+            if transcript_text and summarize_llm is not None:
+                transcript_text = summarize_content(transcript_text, summarize_llm)
+                content += "\n\nTranscript Summary:\n" + transcript_text
+            else:
+                content += "\n\nTranscript:\n" + transcript_text
         else:
             transcript_text = ""
 
-        results.append({"title": video_title, "url": video_url, "description": content, "raw_content": transcript_text})
+        results.append({"title": video_title, "url": video_url, "content": content, "raw_content": transcript_text})
 
     return results
 
