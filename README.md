@@ -128,6 +128,8 @@ par_arch_diagram --system-prompt ./my_system_prompt.md
 ```
 
 ## Whats New
+- Version 0.1.1:
+  - Updated AI Lib and dependencies
 - Version 0.1.0:
   - Initial release
 

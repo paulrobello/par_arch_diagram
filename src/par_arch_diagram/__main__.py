@@ -14,17 +14,16 @@ from langchain_anthropic import ChatAnthropic
 from rich.panel import Panel
 from rich.text import Text
 
-
-from . import __version__, __application_title__, __application_binary__
-from .utils import console
-from .lib.provider_cb_info import get_parai_callback
-from .lib.llm_config import LlmConfig
+from . import __application_binary__, __application_title__, __version__
+from .lib.llm_config import LlmConfig, llm_run_manager
 from .lib.llm_providers import (
     LlmProvider,
     provider_default_models,
     provider_env_key_names,
 )
-from .lib.pricing_lookup import mk_usage_metadata, show_llm_cost, PricingDisplay
+from .lib.pricing_lookup import PricingDisplay, mk_usage_metadata, show_llm_cost
+from .lib.provider_cb_info import get_parai_callback
+from .utils import console
 
 load_dotenv()
 load_dotenv(Path(f"~/.{__application_binary__}.env").expanduser())
@@ -190,7 +189,7 @@ def main(
             output_file.unlink()
         usage_metadata = mk_usage_metadata()
         with console.status("[bold green]Processing IAC data...") as status:
-            with get_parai_callback(llm_config) as cb:
+            with get_parai_callback() as cb:
                 if iac_folder.is_file():
                     iac_info = f"<file>\n<file_name>{iac_folder.name}</file_name>\n<file_content>\n{iac_folder.read_text(encoding='utf-8').strip()}\n</file>"  # noqa: E501
                 elif iac_folder.is_dir():
@@ -241,7 +240,7 @@ def main(
                 valid = False
                 while not valid and iterations < max_iterations:
                     iterations += 1
-                    response = chat_model.invoke(history)
+                    response = chat_model.invoke(history, config=llm_run_manager.get_runnable_config(chat_model.name))
                     usage_metadata = cb.usage_metadata
                     # console.print(Pretty(response))
 
@@ -285,7 +284,7 @@ def main(
         console.print(e)
         console.print(f"[bold red]An error occurred:[/bold red] {str(e)}")
 
-    show_llm_cost(llm_config, usage_metadata, console=console, show_pricing=pricing)
+    show_llm_cost(usage_metadata, console=console, show_pricing=pricing)
 
 
 if __name__ == "__main__":
