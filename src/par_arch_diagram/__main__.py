@@ -11,18 +11,18 @@ from typing import Annotated
 import typer
 from dotenv import load_dotenv
 from langchain_anthropic import ChatAnthropic
-from rich.panel import Panel
-from rich.text import Text
-
-from . import __application_binary__, __application_title__, __version__
-from .lib.llm_config import LlmConfig, llm_run_manager
-from .lib.llm_providers import (
+from par_ai_core.llm_config import LlmConfig, llm_run_manager
+from par_ai_core.llm_providers import (
     LlmProvider,
     provider_default_models,
     provider_env_key_names,
 )
-from .lib.pricing_lookup import PricingDisplay, mk_usage_metadata, show_llm_cost
-from .lib.provider_cb_info import get_parai_callback
+from par_ai_core.pricing_lookup import PricingDisplay, mk_usage_metadata, show_llm_cost
+from par_ai_core.provider_cb_info import get_parai_callback
+from rich.panel import Panel
+from rich.text import Text
+
+from . import __application_binary__, __application_title__, __version__
 from .utils import console
 
 load_dotenv()

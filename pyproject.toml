@@ -44,6 +44,7 @@ dependencies = [
     "langchain-aws>=0.2.2",
     "diagrams>=0.23.4",
     "langchain-xai>=0.1.1",
+    "par-ai-core",
 ]
 
 packages = [
@@ -73,6 +74,9 @@ dev-dependencies = [
     "pre-commit>=3.8.0",
     "ruff>=0.7.0",
 ]
+
+[tool.uv.sources]
+par-ai-core = { path = "../par_ai_core" }
 
 [tool.hatch.version]
 path = "src/par_arch_diagram/__init__.py"
