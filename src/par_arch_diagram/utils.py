@@ -1,10 +1,6 @@
 """Utility functions for par_arch_diagram."""
 
 import tiktoken
-from rich.console import Console
-
-# Initialize rich console
-console = Console()
 
 
 def estimate_tokens(text: str) -> int:

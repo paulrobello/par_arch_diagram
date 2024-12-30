@@ -17,13 +17,13 @@ from par_ai_core.llm_providers import (
     provider_default_models,
     provider_env_key_names,
 )
-from par_ai_core.pricing_lookup import PricingDisplay, mk_usage_metadata, show_llm_cost
+from par_ai_core.par_logging import console_out
+from par_ai_core.pricing_lookup import PricingDisplay
 from par_ai_core.provider_cb_info import get_parai_callback
 from rich.panel import Panel
 from rich.text import Text
 
 from . import __application_binary__, __application_title__, __version__
-from .utils import console
 
 load_dotenv()
 load_dotenv(Path(f"~/.{__application_binary__}.env").expanduser())
@@ -105,25 +105,25 @@ def main(
     """Generate architecture diagrams."""
 
     if not iac_folder.exists():
-        console.print(f"[bold red]IAC folder: {iac_folder} does not exist. Exiting...[/bold red]")
+        console_out.print(f"[bold red]IAC folder: {iac_folder} does not exist. Exiting...[/bold red]")
         raise typer.Exit(1)
 
     if not system_prompt:
         system_prompt = Path(__file__).parent / "system_prompt.md"
     if not system_prompt.exists():
-        console.print(f"[bold red]System prompt file not found: {system_prompt}[/bold red]")
+        console_out.print(f"[bold red]System prompt file not found: {system_prompt}[/bold red]")
         raise typer.Exit(1)
 
     if not model:
         model = provider_default_models[ai_provider]
     if not model:
-        console.print("[bold red]Model not specified and no default available. Exiting...[/bold red]")
+        console_out.print("[bold red]Model not specified and no default available. Exiting...[/bold red]")
         raise typer.Exit(1)
 
     if ai_provider not in [LlmProvider.OLLAMA, LlmProvider.BEDROCK]:
         key_name = provider_env_key_names[ai_provider]
         if not os.environ.get(key_name):
-            console.print(f"[bold red]{key_name} environment variable not set. Exiting...[/bold red]")
+            console_out.print(f"[bold red]{key_name} environment variable not set. Exiting...[/bold red]")
             raise typer.Exit(1)
 
     llm_config = LlmConfig(
@@ -136,12 +136,12 @@ def main(
     chat_model = llm_config.build_chat_model()
 
     if prompt_cache and not isinstance(chat_model, ChatAnthropic):
-        console.print("[bold yellow]Prompt cache is only supported for ANTHROPIC provider.")
+        console_out.print("[bold yellow]Prompt cache is only supported for ANTHROPIC provider.")
         prompt_cache = False
     if not diagram_name:
         diagram_name = "Arch Diagram"
 
-    console.print(
+    console_out.print(
         Panel.fit(
             Text.assemble(
                 ("AI Provider: ", "cyan"),
@@ -185,11 +185,10 @@ def main(
         output_file = output_folder / f"{diagram_name.replace(' ', '_')}.py"
 
         if output_file.exists():
-            console.print(f"[bold yellow]Removing existing output file: {output_file}")
+            console_out.print(f"[bold yellow]Removing existing output file: {output_file}")
             output_file.unlink()
-        usage_metadata = mk_usage_metadata()
-        with console.status("[bold green]Processing IAC data...") as status:
-            with get_parai_callback() as cb:
+        with console_out.status("[bold green]Processing IAC data...") as status:
+            with get_parai_callback(show_pricing=pricing):
                 if iac_folder.is_file():
                     iac_info = f"<file>\n<file_name>{iac_folder.name}</file_name>\n<file_content>\n{iac_folder.read_text(encoding='utf-8').strip()}\n</file>"  # noqa: E501
                 elif iac_folder.is_dir():
@@ -241,10 +240,9 @@ def main(
                 while not valid and iterations < max_iterations:
                     iterations += 1
                     response = chat_model.invoke(history, config=llm_run_manager.get_runnable_config(chat_model.name))
-                    usage_metadata = cb.usage_metadata
-                    # console.print(Pretty(response))
+                    # console_out.print(Pretty(response))
 
-                    console.print(f"[bold cyan]Saving diagram code to {output_file}...")
+                    console_out.print(f"[bold cyan]Saving diagram code to {output_file}...")
                     output_file.write_text(str(response.content), encoding="utf-8")
                     history.append(("assistant", str(response.content)))
                     (output_folder / "history.json").write_text(
@@ -265,26 +263,27 @@ def main(
                             raise Exception(f"Error executing diagram code: {stderr or output}")
                         valid = True
                     except Exception as e:  # pylint: disable=broad-except
-                        console.print(f"[bold red]Error executing diagram code: {str(e).splitlines()[-1]}[/bold red]")
+                        console_out.print(
+                            f"[bold red]Error executing diagram code: {str(e).splitlines()[-1]}[/bold red]"
+                        )
                         history.append(
                             (
                                 "user",
                                 f"Error executing diagram code: {str(e)}",
                             )
                         )
-
+                    status.update("")
+                    status.stop()
             if not valid:
-                console.print("[bold red]Error generating diagram code. Please try again.[/bold red]")
+                console_out.print("[bold red]Error generating diagram code. Please try again.[/bold red]")
                 raise typer.Exit(1)
 
         duration = time.time() - start_time
-        console.print(Panel.fit(f"Done in {duration:.2f} seconds."))
+        console_out.print(Panel.fit(f"Done in {duration:.2f} seconds."))
 
     except Exception as e:  # pylint: disable=broad-except
-        console.print(e)
-        console.print(f"[bold red]An error occurred:[/bold red] {str(e)}")
-
-    show_llm_cost(usage_metadata, console=console, show_pricing=pricing)
+        console_out.print(e)
+        console_out.print(f"[bold red]An error occurred:[/bold red] {str(e)}")
 
 
 if __name__ == "__main__":

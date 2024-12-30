@@ -11,6 +11,7 @@ PAR Arch Diagram is a cli tool that leverages AI to generate architecture diagra
 ## Features
 
 - AI-powered iac analysis and diagramming
+- [PAR AI Core](https://github.com/paulrobello/par_ai_core).
 
 ## Prerequisites
 
@@ -69,11 +70,11 @@ To use PAR Arch Diagram, you can run it from the command line with various optio
 Ensure you have the AI provider api key in your environment.
 You can also store your key in the file `~/.par_arch_diagram.env` as follows:
 ```bash
-GROQ_API_KEY= # is required for Groq. Get a free key from https://console.groq.com/
-ANTHROPIC_API_KEY= # is required for Anthropic. Get a key from https://console.anthropic.com/
+GROQ_API_KEY= # is required for Groq. Get a free key from https://console_out.groq.com/
+ANTHROPIC_API_KEY= # is required for Anthropic. Get a key from https://console_out.anthropic.com/
 OPENAI_API_KEY= # is required for OpenAI. Get a key from https://platform.openai.com/account/api-keys
 GITHUB_TOKEN= # is required for GitHub Models. Get a free key from https://github.com/marketplace/models
-GOOGLE_API_KEY= # is required for Google Models. Get a free key from https://console.cloud.google.com
+GOOGLE_API_KEY= # is required for Google Models. Get a free key from https://console_out.cloud.google.com
 LANGCHAIN_API_KEY= # is required for Langchain Langsmith tracing. Get a free key from https://smith.langchain.com/settings
 AWS_PROFILE= # is used for Bedrock authentication. The environment must already be authenticated with AWS.
 #No key required to use with Ollama models.
