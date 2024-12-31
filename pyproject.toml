@@ -67,13 +67,14 @@ path = "src/par_arch_diagram/__init__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/par_arch_diagram"]
 include = [
-    "*.py",
     "py.typed",
-    "*.gif",
-    "*.jpg",
-    "*.png",
-    "*.md",
-    "*.tcss",
+    "**/*.py",
+    "**/*.html",
+    "**/*.gif",
+    "**/*.jpg",
+    "**/*.png",
+    "**/*.md",
+    "**/*.tcss",
 ]
 
 [tool.hatch.build.targets.sdist]
